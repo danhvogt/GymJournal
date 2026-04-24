@@ -123,7 +123,7 @@
 
   .hero-grid {
     display: grid;
-    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    grid-template-columns: minmax(280px, 0.9fr) minmax(0, 1.6fr);
     gap: 16px;
     align-items: stretch;
     margin-bottom: 16px;
@@ -131,14 +131,106 @@
 
   .hero-left {
     display: grid;
-    grid-template-rows: auto auto;
+    grid-template-rows: auto minmax(0, 1fr);
     gap: 16px;
     min-width: 0;
   }
 
   .hero-left .card,
+  .exercise-card.card,
   .hero-media.card {
     margin-bottom: 0;
+  }
+
+  .exercise-card {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .exercise-select-fallback {
+    display: none;
+  }
+
+  .exercise-tile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .exercise-tile {
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px;
+    min-height: 94px;
+    width: 100%;
+    padding: 12px;
+    border-radius: 16px;
+    border: 1px solid #4b5563;
+    background: #374151;
+    color: #f9fafb;
+    font: inherit;
+    font-size: clamp(14px, 1.8vw, 19px);
+    font-weight: 800;
+    line-height: 1.1;
+    text-align: left;
+    overflow-wrap: normal;
+    word-break: normal;
+    cursor: pointer;
+  }
+
+  .exercise-icon {
+    flex: 0 0 34px;
+    width: 34px;
+    height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 12px;
+    background: rgba(17, 24, 39, 0.38);
+    color: #dbeafe;
+  }
+
+  .exercise-icon svg {
+    width: 25px;
+    height: 25px;
+    display: block;
+    stroke: currentColor;
+  }
+
+  .exercise-tile.active .exercise-icon {
+    background: #111827;
+    color: #f9fafb;
+  }
+
+  .exercise-tile-name {
+    min-width: 0;
+    overflow-wrap: normal;
+    word-break: normal;
+  }
+
+  .exercise-tile:active {
+    transform: scale(0.97);
+  }
+
+  .exercise-tile.active {
+    background: #f9fafb;
+    color: #111827;
+    border-color: #f9fafb;
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  }
+
+  .exercise-empty {
+    padding: 18px;
+    border: 1px dashed #4b5563;
+    border-radius: 16px;
+    color: #9ca3af;
+    font-size: clamp(18px, 4vw, 22px);
+    line-height: 1.35;
+    text-align: center;
+    margin-bottom: 14px;
   }
 
   .hero-media {
@@ -380,6 +472,15 @@
       grid-template-columns: 1fr;
     }
 
+    .exercise-tile-grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
+    .exercise-tile {
+      min-height: 82px;
+      font-size: clamp(14px, 4vw, 18px);
+    }
+
     .media-frame {
       min-height: 260px;
     }
@@ -413,24 +514,26 @@
         </select>
     </div>
 
-    <div class="card">
-      <label class="label">Exercise</label>
-      <select id="exercise" class="control" onchange="loadLastWorkout()"></select>
-
-      <div id="lastSuccess" class="subtext info-box"></div>
-      <div id="lastAttempt" class="subtext attempt-box"></div>
-      <div id="lastNote" class="subtext note-preview" style="display:none;"></div>
+    <div class="card hero-media">
+      <div class="label">Motion</div>
+      <div class="media-frame">
+        <img id="exerciseGif" class="exercise-gif" alt="Exercise demo" style="display:none;">
+        <div id="gifLoading" class="media-state media-loading" style="display:none;">Loading demo...</div>
+        <div id="gifPlaceholder" class="media-state media-placeholder">Pick an exercise to show a GIF.</div>
+        <div id="gifError" class="media-state media-error" style="display:none;">This GIF could not be loaded. Double-check the link in the <code>gif</code> column and make sure the file is shared for viewing.</div>
+      </div>
     </div>
   </div>
 
-  <div class="card hero-media">
-    <div class="label">Motion</div>
-    <div class="media-frame">
-      <img id="exerciseGif" class="exercise-gif" alt="Exercise demo" style="display:none;">
-      <div id="gifLoading" class="media-state media-loading" style="display:none;">Loading demo...</div>
-      <div id="gifPlaceholder" class="media-state media-placeholder">Pick an exercise to show a GIF.</div>
-      <div id="gifError" class="media-state media-error" style="display:none;">This GIF could not be loaded. Double-check the link in the <code>gif</code> column and make sure the file is shared for viewing.</div>
-    </div>
+  <div class="card exercise-card">
+    <label class="label">Exercise</label>
+    <select id="exercise" class="control exercise-select-fallback" onchange="loadLastWorkout()"></select>
+    <div id="exerciseTiles" class="exercise-tile-grid"></div>
+    <div id="exerciseEmpty" class="exercise-empty">Choose a type to see exercises.</div>
+
+    <div id="lastSuccess" class="subtext info-box" style="display:none;"></div>
+    <div id="lastAttempt" class="subtext attempt-box" style="display:none;"></div>
+    <div id="lastNote" class="subtext note-preview" style="display:none;"></div>
   </div>
 </div>
 
@@ -631,16 +734,18 @@ function loadExercises() {
   const dropdown = document.getElementById("exercise");
 
   dropdown.innerHTML = "";
+  dropdown.value = "";
   exerciseCatalog = [];
+  renderExerciseTiles([]);
+  setExerciseEmpty("Choose a type to see exercises.");
+  clearLastWorkoutDisplay();
   renderExerciseGif(null);
 
   if (!type) {
-    document.getElementById("lastSuccess").innerHTML = "";
-    document.getElementById("lastAttempt").innerHTML = "";
-    document.getElementById("lastNote").style.display = "none";
-    document.getElementById("lastNote").innerHTML = "";
     return;
   }
+
+  setExerciseEmpty("Loading exercises...");
 
   google.script.run.withSuccessHandler(function(exercises) {
     exerciseCatalog = exercises || [];
@@ -648,18 +753,24 @@ function loadExercises() {
     exerciseCatalog.forEach(ex => {
       let opt = document.createElement("option");
       opt.value = ex.name;
-      opt.innerHTML = ex.name;
+      opt.textContent = ex.name;
       dropdown.appendChild(opt);
     });
 
-    // optional: auto-load first exercise
+    renderExerciseTiles(exerciseCatalog, type);
+
     if (exerciseCatalog.length > 0) {
-      loadLastWorkout();
+      selectExercise(exerciseCatalog[0].name);
     } else {
-      document.getElementById("lastSuccess").innerHTML = "No exercises found for this type.";
-      document.getElementById("lastAttempt").innerHTML = "";
+      const successDiv = document.getElementById("lastSuccess");
+      const attemptDiv = document.getElementById("lastAttempt");
+      successDiv.innerHTML = "No exercises found for this type.";
+      successDiv.style.display = "block";
+      attemptDiv.innerHTML = "";
+      attemptDiv.style.display = "none";
       document.getElementById("lastNote").style.display = "none";
       document.getElementById("lastNote").innerHTML = "";
+      setExerciseEmpty("No exercises found for this type.");
       renderExerciseGif({
         state: "empty",
         exerciseName: "",
@@ -670,9 +781,185 @@ function loadExercises() {
   }).getExercises(type);
 }
 
+function renderExerciseTiles(exercises, type) {
+  const container = document.getElementById("exerciseTiles");
+
+  container.innerHTML = "";
+
+  if (!exercises || !exercises.length) {
+    container.style.display = "none";
+    return;
+  }
+
+  container.style.display = "grid";
+  document.getElementById("exerciseEmpty").style.display = "none";
+
+  exercises.forEach(ex => {
+    const tile = document.createElement("button");
+    const icon = document.createElement("span");
+    const name = document.createElement("span");
+
+    tile.type = "button";
+    tile.className = "exercise-tile";
+    tile.dataset.exercise = ex.name;
+    tile.onclick = () => selectExercise(ex.name, tile);
+
+    icon.className = "exercise-icon";
+    icon.setAttribute("aria-hidden", "true");
+    icon.innerHTML = getExerciseIcon(ex.name, type);
+
+    name.className = "exercise-tile-name";
+    name.textContent = ex.name;
+
+    tile.appendChild(icon);
+    tile.appendChild(name);
+    container.appendChild(tile);
+  });
+}
+
+function getExerciseIcon(exerciseName, type) {
+  const name = String(exerciseName || "").toLowerCase();
+
+  if (name.includes("pulldown") || name.includes("pull-down")) {
+    return iconSvg([
+      '<path d="M8 5h16" />',
+      '<path d="M12 5v7" />',
+      '<path d="M20 5v7" />',
+      '<path d="M10 12h12" />',
+      '<path d="M13 12l-3 8" />',
+      '<path d="M19 12l3 8" />',
+      '<path d="M11 21h10" />'
+    ]);
+  }
+
+  if (name.includes("row")) {
+    return iconSvg([
+      '<path d="M5 20h22" />',
+      '<path d="M10 16l5-7 6 7" />',
+      '<path d="M8 14l16-5" />',
+      '<path d="M22 8l3 2" />'
+    ]);
+  }
+
+  if (name.includes("curl")) {
+    return dumbbellIcon();
+  }
+
+  if (name.includes("press") || name.includes("squat") || name.includes("deadlift")) {
+    return barbellIcon();
+  }
+
+  if (name.includes("fly")) {
+    return iconSvg([
+      '<path d="M16 19V9" />',
+      '<path d="M16 9c-5 1-8 4-9 9" />',
+      '<path d="M16 9c5 1 8 4 9 9" />',
+      '<path d="M7 18h4" />',
+      '<path d="M21 18h4" />'
+    ]);
+  }
+
+  if (name.includes("triceps") || name.includes("pushdown")) {
+    return iconSvg([
+      '<path d="M16 5v8" />',
+      '<path d="M10 13h12" />',
+      '<path d="M12 13l-2 7" />',
+      '<path d="M20 13l2 7" />',
+      '<path d="M9 21h14" />'
+    ]);
+  }
+
+  if (name.includes("leg") || name.includes("calf")) {
+    return iconSvg([
+      '<path d="M11 6v8l-4 6" />',
+      '<path d="M18 6v7l5 3v5" />',
+      '<path d="M7 21h8" />',
+      '<path d="M20 21h5" />'
+    ]);
+  }
+
+  if (name.includes("plank") || name.includes("crunch") || name.includes("raise") || name.includes("twist")) {
+    return iconSvg([
+      '<path d="M6 20h20" />',
+      '<path d="M9 17c2-4 5-6 8-6s5 2 7 6" />',
+      '<path d="M12 12l8 5" />',
+      '<path d="M20 12l-8 5" />'
+    ]);
+  }
+
+  if (String(type || "").toLowerCase() === "pull") {
+    return dumbbellIcon();
+  }
+
+  if (String(type || "").toLowerCase() === "legs") {
+    return barbellIcon();
+  }
+
+  return barbellIcon();
+}
+
+function barbellIcon() {
+  return iconSvg([
+    '<path d="M4 16h24" />',
+    '<path d="M7 11v10" />',
+    '<path d="M10 13v6" />',
+    '<path d="M22 13v6" />',
+    '<path d="M25 11v10" />'
+  ]);
+}
+
+function dumbbellIcon() {
+  return iconSvg([
+    '<path d="M6 12v8" />',
+    '<path d="M9 10v12" />',
+    '<path d="M23 10v12" />',
+    '<path d="M26 12v8" />',
+    '<path d="M9 16h14" />'
+  ]);
+}
+
+function iconSvg(paths) {
+  return `<svg viewBox="0 0 32 32" fill="none" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round">${paths.join("")}</svg>`;
+}
+
+function setExerciseEmpty(message) {
+  const empty = document.getElementById("exerciseEmpty");
+  empty.textContent = message;
+  empty.style.display = "block";
+}
+
+function clearLastWorkoutDisplay() {
+  const successDiv = document.getElementById("lastSuccess");
+  const attemptDiv = document.getElementById("lastAttempt");
+
+  successDiv.innerHTML = "";
+  successDiv.style.display = "none";
+  attemptDiv.innerHTML = "";
+  attemptDiv.style.display = "none";
+  document.getElementById("lastNote").style.display = "none";
+  document.getElementById("lastNote").innerHTML = "";
+}
+
+function selectExercise(exerciseName, selectedTile) {
+  const dropdown = document.getElementById("exercise");
+  dropdown.value = exerciseName;
+
+  document.querySelectorAll("#exerciseTiles .exercise-tile").forEach(tile => {
+    tile.classList.toggle("active", tile === selectedTile || tile.dataset.exercise === exerciseName);
+  });
+
+  loadLastWorkout();
+}
+
 function loadLastWorkout() {
   const exercise = document.getElementById("exercise").value;
   const selectedExercise = exerciseCatalog.find(ex => ex.name === exercise);
+
+  if (!exercise) {
+    clearLastWorkoutDisplay();
+    renderExerciseGif(null);
+    return;
+  }
 
   renderExerciseGif({
     state: selectedExercise && selectedExercise.gif ? "loading" : "empty",
@@ -684,6 +971,9 @@ function loadLastWorkout() {
     const successDiv = document.getElementById("lastSuccess");
     const attemptDiv = document.getElementById("lastAttempt");
     const noteDiv = document.getElementById("lastNote");
+
+    successDiv.style.display = "block";
+    attemptDiv.style.display = "block";
 
     if (data && data.success) {
       successDiv.innerHTML = `Last success: ${data.success.sets}x${data.success.reps} @ ${data.success.load}`;
