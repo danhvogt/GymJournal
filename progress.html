@@ -1,0 +1,479 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body {
+      margin: 0;
+      padding: 16px;
+      font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+      background: #f3f4f6;
+      color: #111827;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .topbar-left {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      min-width: 0;
+    }
+
+    .title {
+      margin: 0;
+      font-size: clamp(28px, 6vw, 38px);
+      font-weight: 800;
+    }
+
+    .nav-link,
+    .pager-button {
+      border-radius: 12px;
+      background: #111827;
+      color: #f9fafb;
+      padding: 12px 16px;
+      font-size: 16px;
+      font-weight: 700;
+      text-decoration: none;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      border: none;
+    }
+
+    .pager-button:disabled {
+      opacity: 0.45;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    .control-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: 0 10px 24px rgba(15, 23, 42, 0.06);
+    }
+
+    .control-label {
+      display: block;
+      margin-bottom: 8px;
+      color: #4b5563;
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .type-select,
+    .metric-select {
+      width: 100%;
+      padding: 14px 16px;
+      border-radius: 14px;
+      border: 1px solid #cbd5e1;
+      background: white;
+      font-size: 16px;
+      color: #111827;
+    }
+
+    .toggle-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-height: 52px;
+      color: #111827;
+      font-size: 15px;
+      font-weight: 700;
+    }
+
+    .toggle-row input {
+      width: 20px;
+      height: 20px;
+    }
+
+    .pager-wrap {
+      display: flex;
+      align-items: center;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+
+    .pager-status {
+      min-width: 96px;
+      text-align: center;
+      font-size: 14px;
+      color: #4b5563;
+      font-weight: 700;
+    }
+
+    .summary {
+      margin-bottom: 14px;
+      color: #4b5563;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    #charts {
+      display: grid;
+      gap: 16px;
+      touch-action: pan-y;
+    }
+
+    .chart-card {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 16px;
+      box-shadow: 0 12px 26px rgba(15, 23, 42, 0.08);
+    }
+
+    .chart-title {
+      margin: 0 0 8px;
+      font-size: 20px;
+      font-weight: 800;
+      color: #111827;
+    }
+
+    .chart-meta {
+      margin: 0 0 12px;
+      color: #6b7280;
+      font-size: 14px;
+      font-weight: 600;
+    }
+
+    .swipe-hint {
+      margin-top: 12px;
+      color: #94a3b8;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .empty-state {
+      background: white;
+      border: 1px solid #e5e7eb;
+      border-radius: 18px;
+      padding: 24px;
+      color: #6b7280;
+      text-align: center;
+      font-weight: 600;
+    }
+
+    canvas {
+      width: 100% !important;
+      height: 280px !important;
+    }
+
+    @media (max-width: 820px) {
+      .controls {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar {
+        align-items: flex-start;
+        flex-direction: column;
+      }
+
+      .pager-wrap {
+        justify-content: space-between;
+      }
+    }
+  </style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="topbar-left">
+    <a class="nav-link" href="?">Workout</a>
+    <h1 class="title">Progress</h1>
+  </div>
+</div>
+
+<div class="controls">
+  <div class="control-card">
+    <label class="control-label" for="type">Workout Type</label>
+    <select id="type" class="type-select" onchange="loadAllCharts()">
+      <option>Push</option>
+      <option>Pull</option>
+      <option>Legs</option>
+      <option>Abs</option>
+    </select>
+  </div>
+
+  <div class="control-card">
+    <label class="control-label" for="metric">Chart Metric</label>
+    <select id="metric" class="metric-select" onchange="renderCurrentPage()">
+      <option value="volume">Volume</option>
+      <option value="load">Weight</option>
+      <option value="reps">Reps</option>
+      <option value="estimated1rm">Estimated 1RM</option>
+    </select>
+  </div>
+
+  <div class="control-card">
+    <div class="control-label">Filter</div>
+    <label class="toggle-row">
+      <input id="successfulOnly" type="checkbox" onchange="loadAllCharts()">
+      Successful Attempts Only
+    </label>
+  </div>
+</div>
+
+<div class="pager-wrap">
+  <button id="prevPage" class="pager-button" onclick="changePage(-1)">Prev</button>
+  <div id="pageStatus" class="pager-status">Page 1 / 1</div>
+  <button id="nextPage" class="pager-button" onclick="changePage(1)">Next</button>
+</div>
+
+<div id="summary" class="summary"></div>
+<div id="charts"></div>
+
+<script>
+let allExercises = [];
+let currentPage = 1;
+let chartsPerPage = 4;
+let chartInstances = [];
+let touchStartX = 0;
+let touchStartY = 0;
+
+const metricConfig = {
+  volume: {
+    label: "Volume",
+    color: "#2563eb",
+    fill: "rgba(37, 99, 235, 0.16)",
+    yTitle: "Volume"
+  },
+  load: {
+    label: "Weight",
+    color: "#059669",
+    fill: "rgba(5, 150, 105, 0.16)",
+    yTitle: "Weight"
+  },
+  reps: {
+    label: "Reps",
+    color: "#ea580c",
+    fill: "rgba(234, 88, 12, 0.16)",
+    yTitle: "Reps"
+  },
+  estimated1rm: {
+    label: "Estimated 1RM",
+    color: "#7c3aed",
+    fill: "rgba(124, 58, 237, 0.16)",
+    yTitle: "Estimated 1RM"
+  }
+};
+
+function getSelectedMetric() {
+  return document.getElementById("metric").value;
+}
+
+function getMetricLabel(metricKey) {
+  return metricConfig[metricKey] ? metricConfig[metricKey].label : "Volume";
+}
+
+function loadAllCharts() {
+  const type = document.getElementById("type").value;
+  const successfulOnly = document.getElementById("successfulOnly").checked;
+  currentPage = 1;
+
+  google.script.run
+    .withSuccessHandler(data => {
+      allExercises = Array.isArray(data) ? data : [];
+      renderCurrentPage();
+    })
+    .withFailureHandler(err => {
+      console.error(err);
+      destroyCharts();
+      document.getElementById("charts").innerHTML =
+        `<div class="empty-state">Error loading progress: ${err.message}</div>`;
+      document.getElementById("summary").innerHTML = "";
+      updatePaginationUi();
+    })
+    .getProgressDataByType(type, successfulOnly);
+}
+
+function destroyCharts() {
+  chartInstances.forEach(chart => chart.destroy());
+  chartInstances = [];
+}
+
+function renderCurrentPage() {
+  const container = document.getElementById("charts");
+  const summary = document.getElementById("summary");
+  const metricKey = getSelectedMetric();
+  const metric = metricConfig[metricKey];
+  const totalPages = getTotalPages();
+
+  destroyCharts();
+  container.innerHTML = "";
+
+  if (!allExercises.length) {
+    summary.innerHTML = "No exercise history found for the current filters.";
+    container.innerHTML = '<div class="empty-state">No charts to display yet.</div>';
+    updatePaginationUi();
+    return;
+  }
+
+  if (currentPage > totalPages) {
+    currentPage = totalPages;
+  }
+
+  const start = (currentPage - 1) * chartsPerPage;
+  const end = start + chartsPerPage;
+  const pageExercises = allExercises.slice(start, end);
+
+  summary.innerHTML =
+    `Showing ${start + 1}-${Math.min(end, allExercises.length)} of ${allExercises.length} exercises by ${metric.label}`;
+
+  pageExercises.forEach((ex, index) => {
+    const dataPoints = ex.metrics && ex.metrics[metricKey] ? ex.metrics[metricKey] : [];
+
+    const wrapper = document.createElement("div");
+    wrapper.className = "chart-card";
+
+    const title = document.createElement("h3");
+    title.className = "chart-title";
+    title.innerText = ex.exercise;
+
+    const meta = document.createElement("p");
+    meta.className = "chart-meta";
+    meta.innerText = `${ex.workoutCount} workout${ex.workoutCount === 1 ? "" : "s"} tracked`;
+
+    const canvas = document.createElement("canvas");
+    canvas.id = `chart_${currentPage}_${index}`;
+
+    const hint = document.createElement("div");
+    hint.className = "swipe-hint";
+    hint.innerText = "Swipe left or right to change pages";
+
+    wrapper.appendChild(title);
+    wrapper.appendChild(meta);
+    wrapper.appendChild(canvas);
+
+    if (window.matchMedia("(max-width: 820px)").matches) {
+      wrapper.appendChild(hint);
+    }
+
+    container.appendChild(wrapper);
+
+    const chart = new Chart(canvas, {
+      type: "line",
+      data: {
+        labels: ex.labels,
+        datasets: [{
+          label: metric.label,
+          data: dataPoints,
+          borderWidth: 3,
+          borderColor: metric.color,
+          backgroundColor: metric.fill,
+          pointBackgroundColor: metric.color,
+          pointRadius: 4,
+          pointHoverRadius: 5,
+          fill: true,
+          tension: 0.28
+        }]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: "Workout #"
+            },
+            grid: {
+              display: false
+            }
+          },
+          y: {
+            beginAtZero: true,
+            title: {
+              display: true,
+              text: metric.yTitle
+            }
+          }
+        }
+      }
+    });
+
+    chartInstances.push(chart);
+  });
+
+  updatePaginationUi();
+}
+
+function getTotalPages() {
+  return Math.max(1, Math.ceil(allExercises.length / chartsPerPage));
+}
+
+function updatePaginationUi() {
+  const totalPages = getTotalPages();
+  document.getElementById("pageStatus").innerText = `Page ${currentPage} / ${totalPages}`;
+  document.getElementById("prevPage").disabled = currentPage <= 1 || allExercises.length === 0;
+  document.getElementById("nextPage").disabled = currentPage >= totalPages || allExercises.length === 0;
+}
+
+function changePage(direction) {
+  const nextPage = currentPage + direction;
+  const totalPages = getTotalPages();
+
+  if (nextPage < 1 || nextPage > totalPages) {
+    return;
+  }
+
+  currentPage = nextPage;
+  renderCurrentPage();
+  window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function setupSwipePagination() {
+  const charts = document.getElementById("charts");
+
+  charts.addEventListener("touchstart", event => {
+    const touch = event.changedTouches[0];
+    touchStartX = touch.clientX;
+    touchStartY = touch.clientY;
+  }, { passive: true });
+
+  charts.addEventListener("touchend", event => {
+    const touch = event.changedTouches[0];
+    const deltaX = touch.clientX - touchStartX;
+    const deltaY = touch.clientY - touchStartY;
+
+    if (Math.abs(deltaX) < 60 || Math.abs(deltaX) < Math.abs(deltaY)) {
+      return;
+    }
+
+    if (deltaX < 0) {
+      changePage(1);
+    } else {
+      changePage(-1);
+    }
+  }, { passive: true });
+}
+
+setupSwipePagination();
+loadAllCharts();
+</script>
+
+</body>
+</html>

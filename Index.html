@@ -1,0 +1,1042 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+  <style>
+  html, body {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+    background: #111827;
+    color: #f9fafb;
+  }
+
+  *, *:before, *:after {
+    box-sizing: inherit;
+  }
+
+  .checkbox {
+    transform: scale(3);
+  }
+
+  #confettiCanvas {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 9999;
+  }
+
+  #scoreFlash {
+    position: fixed;
+    left: 50%;
+    top: 38%;
+    transform: translate(-50%, -50%) scale(0.45) rotate(-8deg);
+    pointer-events: none;
+    z-index: 10000;
+    opacity: 0;
+    font-family: Impact, Haettenschweiler, "Arial Black", sans-serif;
+    font-size: clamp(42px, 10vw, 86px);
+    line-height: 1;
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+    color: #fef08a;
+    text-shadow:
+      -3px -3px 0 #111827,
+      3px -3px 0 #111827,
+      -3px 3px 0 #111827,
+      3px 3px 0 #111827,
+      0 8px 22px rgba(0, 0, 0, 0.45);
+  }
+
+  #scoreFlash.show {
+    animation: score-pop 900ms cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+
+  @keyframes score-pop {
+    0% {
+      opacity: 0;
+      transform: translate(-50%, -50%) scale(0.45) rotate(-8deg);
+    }
+    18% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(1.18) rotate(-4deg);
+    }
+    42% {
+      opacity: 1;
+      transform: translate(-50%, -50%) scale(0.98) rotate(2deg);
+    }
+    100% {
+      opacity: 0;
+      transform: translate(-50%, -62%) scale(1.06) rotate(0deg);
+    }
+  }
+
+  .wrap {
+    padding: 16px;
+    width: 100%;
+  }
+
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .topbar-left {
+    min-width: 0;
+  }
+
+  .topbar-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 16px;
+    border-radius: 999px;
+    border: 1px solid #374151;
+    background: rgba(31, 41, 55, 0.88);
+    color: #f9fafb;
+    text-decoration: none;
+    font-size: 15px;
+    font-weight: 700;
+    white-space: nowrap;
+  }
+
+  .topbar-link:visited {
+    color: #f9fafb;
+  }
+
+  .card {
+    background: #1f2937;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+    width: 100%;
+    box-shadow: 0 6px 18px rgba(0,0,0,0.35);
+    border: 1px solid #374151;
+  }
+
+  .hero-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 2fr) minmax(0, 1fr);
+    gap: 16px;
+    align-items: stretch;
+    margin-bottom: 16px;
+  }
+
+  .hero-left {
+    display: grid;
+    grid-template-rows: auto auto;
+    gap: 16px;
+    min-width: 0;
+  }
+
+  .hero-left .card,
+  .hero-media.card {
+    margin-bottom: 0;
+  }
+
+  .hero-media {
+    display: flex;
+    flex-direction: column;
+    min-height: 100%;
+  }
+
+  .media-frame {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 320px;
+    border-radius: 18px;
+    overflow: hidden;
+    position: relative;
+    background:
+      linear-gradient(135deg, rgba(30, 41, 59, 0.95), rgba(15, 23, 42, 0.98)),
+      repeating-linear-gradient(
+        45deg,
+        rgba(148, 163, 184, 0.06) 0,
+        rgba(148, 163, 184, 0.06) 12px,
+        transparent 12px,
+        transparent 24px
+      );
+    border: 1px solid rgba(148, 163, 184, 0.18);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  }
+
+  .exercise-gif {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    display: block;
+    padding: 12px;
+  }
+
+  .media-state {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 22px;
+    text-align: center;
+  }
+
+  .media-placeholder {
+    color: #9ca3af;
+    font-size: clamp(16px, 3vw, 18px);
+    line-height: 1.4;
+  }
+
+  .media-loading {
+    color: #bfdbfe;
+    font-size: clamp(16px, 3vw, 18px);
+  }
+
+  .media-error {
+    color: #fecaca;
+    font-size: clamp(16px, 3vw, 18px);
+    line-height: 1.5;
+  }
+
+  .title {
+    font-size: clamp(36px, 9vw, 44px);
+    font-weight: 800;
+    margin: 0 0 16px 4px;
+    text-align: left;
+    color: #f9fafb;
+  }
+
+  body {
+    padding: 0 10px;
+  }
+
+  .label {
+    font-size: clamp(26px, 6.5vw, 32px);
+    margin-bottom: 12px;
+    font-weight: 700;
+    text-align: left;
+    color: #f3f4f6;
+  }
+
+  .control {
+    width: 100%;
+    padding: 26px;
+    font-size: clamp(28px, 7vw, 36px);
+    border-radius: 16px;
+    border: 1px solid #4b5563;
+    background: #111827;
+    color: #f9fafb;
+    appearance: none;
+  }
+
+  .tile {
+    flex: 1;
+    min-width: 0;
+    padding: 24px;
+    font-size: clamp(28px, 7vw, 36px);
+    border-radius: 16px;
+    background: #374151;
+    color: #f9fafb;
+  }
+
+  .tile:active {
+    transform: scale(0.94);
+  }
+
+  .tile.active {
+    background: #f9fafb;
+    color: #111827;
+    transform: scale(1.05);
+    box-shadow: 0 6px 14px rgba(0,0,0,0.35);
+  }
+
+  .tile-row {
+    display: flex;
+    gap: 12px;
+  }
+
+  .tile-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 12px;
+  }
+
+  .info-box {
+    background: #1e3a8a;
+    color: #dbeafe;
+    padding: 14px;
+    border-radius: 12px;
+    margin-top: 10px;
+  }
+
+  .attempt-box {
+    background: #7c2d12;
+    color: #ffedd5;
+    padding: 14px;
+    border-radius: 12px;
+    margin-top: 10px;
+  }
+
+  .note-preview {
+    margin-top: 10px;
+    padding: 14px;
+    border-radius: 12px;
+    background: #312e81;
+    color: #e0e7ff;
+  }
+
+  .section-gap {
+    margin-top: 10px;
+  }
+
+  .button {
+    width: 100%;
+    padding: 26px;
+    font-size: clamp(30px, 8vw, 38px);
+    background: #f9fafb;
+    color: #111827;
+    border-radius: 18px;
+    margin-top: 10px;
+    border: none;
+  }
+
+  .button:active {
+    transform: scale(0.96);
+    opacity: 0.9;
+  }
+
+  .button.loading {
+    background: #4b5563;
+    color: #f9fafb;
+  }
+
+  .button.success {
+    background: #16a34a;
+    color: white;
+  }
+
+  .subtext {
+    font-size: clamp(22px, 5.5vw, 28px);
+  }
+
+  .status {
+    font-size: clamp(20px, 5vw, 24px);
+    color: #d1d5db;
+  }
+
+  .control {
+    width: 100%;
+    padding: 20px;
+    font-size: clamp(26px, 6.5vw, 32px);
+    border-radius: 14px;
+    border: 1px solid #4b5563;
+    background: #111827;
+    color: #f9fafb;
+    appearance: none;
+  }
+
+  .scroll-row {
+    display: flex;
+    overflow-x: auto;
+    gap: 12px;
+    scroll-snap-type: x mandatory;
+    padding-bottom: 6px;
+  }
+
+  .scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  .scroll-tile {
+    flex: 0 0 calc(33.333% - 8px);
+    scroll-snap-align: center;
+    padding: 24px;
+    font-size: clamp(28px, 7vw, 36px);
+    border-radius: 16px;
+    background: #374151;
+    color: #f9fafb;
+    text-align: center;
+  }
+
+  .scroll-tile.active {
+    background: #f9fafb;
+    color: #111827;
+    transform: scale(1.05);
+  }
+
+  @media (max-width: 800px) {
+    .topbar {
+      align-items: flex-start;
+      flex-direction: column;
+    }
+
+    .hero-grid {
+      grid-template-columns: 1fr;
+    }
+
+    .media-frame {
+      min-height: 260px;
+    }
+  }
+</style>
+</head>
+<body>
+
+<canvas id="confettiCanvas"></canvas>
+<div id="scoreFlash">+100 pts!</div>
+
+<div class="wrap">
+
+<div class="topbar">
+  <div class="topbar-left">
+    <h1 class="title">Workout</h1>
+  </div>
+  <a class="topbar-link" href="?page=progress">View Progress</a>
+</div>
+
+<div class="hero-grid">
+  <div class="hero-left">
+    <div class="card">
+      <label class="label">Type</label>
+        <select id="type" class="control" onchange="loadExercises()">
+          <option value="">Select</option>
+          <option>Push</option>
+          <option>Pull</option>
+          <option>Legs</option>
+          <option>Abs</option>
+        </select>
+    </div>
+
+    <div class="card">
+      <label class="label">Exercise</label>
+      <select id="exercise" class="control" onchange="loadLastWorkout()"></select>
+
+      <div id="lastSuccess" class="subtext info-box"></div>
+      <div id="lastAttempt" class="subtext attempt-box"></div>
+      <div id="lastNote" class="subtext note-preview" style="display:none;"></div>
+    </div>
+  </div>
+
+  <div class="card hero-media">
+    <div class="label">Motion</div>
+    <div class="media-frame">
+      <img id="exerciseGif" class="exercise-gif" alt="Exercise demo" style="display:none;">
+      <div id="gifLoading" class="media-state media-loading" style="display:none;">Loading demo...</div>
+      <div id="gifPlaceholder" class="media-state media-placeholder">Pick an exercise to show a GIF.</div>
+      <div id="gifError" class="media-state media-error" style="display:none;">This GIF could not be loaded. Double-check the link in the <code>gif</code> column and make sure the file is shared for viewing.</div>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <div class="label">Sets</div>
+  <div id="setsTiles" class="scroll-row"></div>
+</div>
+
+<div class="card">
+  <div class="label">Reps</div>
+  <div id="repsTiles" class="scroll-row"></div>
+</div>
+
+<div class="card">
+  <div class="label">Load</div>
+  <div id="loadTiles" class="scroll-row"></div>
+</div>
+
+<div class="card">
+  <input id="notes" type="text" placeholder="Notes" class="control">
+</div>
+
+<div class="card">
+  <div class="label">Success</div>
+  <div id="successTiles" class="tile-row">
+    <div onclick="selectSuccess(true, this)" class="tile">Yes</div>
+    <div onclick="selectSuccess(false, this)" class="tile">No</div>
+  </div>
+</div>
+
+<div style="position:sticky; bottom:10px;">
+  <button onclick="save()" id="saveBtn" class="button">
+    Save Workout
+  </button>
+</div>
+
+<p id="status" class="status"></p>
+
+</div>
+
+
+
+<script>
+
+  let selectedSuccess = null;
+  let exerciseCatalog = [];
+  let confettiParticles = [];
+  let confettiAnimationId = null;
+  let confettiCtx = null;
+  let scoreFlashTimeout = null;
+
+  function selectSuccess(value, el) {
+    const parent = el.parentElement;
+
+    Array.from(parent.children).forEach(child => {
+      child.classList.remove("active");
+    });
+
+    el.classList.add("active");
+    selectedSuccess = value;
+
+    if (value === true) {
+      launchConfetti();
+    }
+  }
+
+  function resetSuccessToNo() {
+    const tiles = document.querySelectorAll("#successTiles .tile");
+    if (tiles.length > 1) {
+      tiles[1].click();
+    }
+  }
+
+  function setupConfettiCanvas() {
+    const canvas = document.getElementById("confettiCanvas");
+    confettiCtx = canvas.getContext("2d");
+    resizeConfettiCanvas();
+    window.addEventListener("resize", resizeConfettiCanvas);
+  }
+
+  function resizeConfettiCanvas() {
+    const canvas = document.getElementById("confettiCanvas");
+    const ratio = window.devicePixelRatio || 1;
+
+    canvas.width = Math.floor(window.innerWidth * ratio);
+    canvas.height = Math.floor(window.innerHeight * ratio);
+    canvas.style.width = window.innerWidth + "px";
+    canvas.style.height = window.innerHeight + "px";
+
+    if (confettiCtx) {
+      confettiCtx.setTransform(ratio, 0, 0, ratio, 0, 0);
+    }
+  }
+
+  function launchConfetti() {
+    const colors = ["#f59e0b", "#10b981", "#60a5fa", "#f472b6", "#f8fafc"];
+    const count = window.innerWidth < 700 ? 90 : 150;
+
+    confettiParticles = [];
+
+    for (let i = 0; i < count; i++) {
+      confettiParticles.push({
+        x: Math.random() * window.innerWidth,
+        y: -20 - Math.random() * window.innerHeight * 0.35,
+        size: 6 + Math.random() * 10,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        speedY: 2.5 + Math.random() * 4.5,
+        speedX: -2 + Math.random() * 4,
+        rotation: Math.random() * Math.PI * 2,
+        rotationSpeed: -0.18 + Math.random() * 0.36,
+        wobble: Math.random() * Math.PI * 2,
+        wobbleSpeed: 0.03 + Math.random() * 0.08,
+        shape: Math.random() > 0.5 ? "rect" : "circle"
+      });
+    }
+
+    if (confettiAnimationId) {
+      cancelAnimationFrame(confettiAnimationId);
+    }
+
+    animateConfetti();
+  }
+
+  function showScoreFlash() {
+    const flash = document.getElementById("scoreFlash");
+
+    flash.classList.remove("show");
+    void flash.offsetWidth;
+    flash.classList.add("show");
+
+    if (scoreFlashTimeout) {
+      clearTimeout(scoreFlashTimeout);
+    }
+
+    scoreFlashTimeout = setTimeout(() => {
+      flash.classList.remove("show");
+    }, 950);
+  }
+
+  function animateConfetti() {
+    const canvas = document.getElementById("confettiCanvas");
+
+    if (!confettiCtx) return;
+
+    confettiCtx.clearRect(0, 0, canvas.width, canvas.height);
+
+    confettiParticles = confettiParticles.filter(piece => piece.y < window.innerHeight + 30);
+
+    confettiParticles.forEach(piece => {
+      piece.x += piece.speedX + Math.sin(piece.wobble) * 1.4;
+      piece.y += piece.speedY;
+      piece.rotation += piece.rotationSpeed;
+      piece.wobble += piece.wobbleSpeed;
+
+      confettiCtx.save();
+      confettiCtx.translate(piece.x, piece.y);
+      confettiCtx.rotate(piece.rotation);
+      confettiCtx.fillStyle = piece.color;
+
+      if (piece.shape === "circle") {
+        confettiCtx.beginPath();
+        confettiCtx.arc(0, 0, piece.size * 0.35, 0, Math.PI * 2);
+        confettiCtx.fill();
+      } else {
+        confettiCtx.fillRect(-piece.size / 2, -piece.size / 3, piece.size, piece.size * 0.66);
+      }
+
+      confettiCtx.restore();
+    });
+
+    if (confettiParticles.length > 0) {
+      confettiAnimationId = requestAnimationFrame(animateConfetti);
+    } else {
+      confettiCtx.clearRect(0, 0, canvas.width, canvas.height);
+      confettiAnimationId = null;
+    }
+  }
+
+  window.onload = () => {
+    setupConfettiCanvas();
+    buildReps(1, 100);
+    buildSets(1, 20);
+    buildLoad(0, 500, 5);
+
+    enableScrollSelection(document.getElementById("repsTiles"));
+    enableScrollSelection(document.getElementById("setsTiles"));
+    enableScrollSelection(document.getElementById("loadTiles"));
+
+    resetSuccessToNo();
+
+    centerDefault("repsTiles");
+    centerDefault("setsTiles");
+    centerDefault("loadTiles");
+  };
+
+function loadExercises() {
+  const type = document.getElementById("type").value;
+  const dropdown = document.getElementById("exercise");
+
+  dropdown.innerHTML = "";
+  exerciseCatalog = [];
+  renderExerciseGif(null);
+
+  if (!type) {
+    document.getElementById("lastSuccess").innerHTML = "";
+    document.getElementById("lastAttempt").innerHTML = "";
+    document.getElementById("lastNote").style.display = "none";
+    document.getElementById("lastNote").innerHTML = "";
+    return;
+  }
+
+  google.script.run.withSuccessHandler(function(exercises) {
+    exerciseCatalog = exercises || [];
+
+    exerciseCatalog.forEach(ex => {
+      let opt = document.createElement("option");
+      opt.value = ex.name;
+      opt.innerHTML = ex.name;
+      dropdown.appendChild(opt);
+    });
+
+    // optional: auto-load first exercise
+    if (exerciseCatalog.length > 0) {
+      loadLastWorkout();
+    } else {
+      document.getElementById("lastSuccess").innerHTML = "No exercises found for this type.";
+      document.getElementById("lastAttempt").innerHTML = "";
+      document.getElementById("lastNote").style.display = "none";
+      document.getElementById("lastNote").innerHTML = "";
+      renderExerciseGif({
+        state: "empty",
+        exerciseName: "",
+        url: ""
+      });
+    }
+
+  }).getExercises(type);
+}
+
+function loadLastWorkout() {
+  const exercise = document.getElementById("exercise").value;
+  const selectedExercise = exerciseCatalog.find(ex => ex.name === exercise);
+
+  renderExerciseGif({
+    state: selectedExercise && selectedExercise.gif ? "loading" : "empty",
+    exerciseName: exercise,
+    url: selectedExercise ? selectedExercise.gif : ""
+  });
+
+  google.script.run.withSuccessHandler(function(data) {
+    const successDiv = document.getElementById("lastSuccess");
+    const attemptDiv = document.getElementById("lastAttempt");
+    const noteDiv = document.getElementById("lastNote");
+
+    if (data && data.success) {
+      successDiv.innerHTML = `Last success: ${data.success.sets}x${data.success.reps} @ ${data.success.load}`;
+    } else {
+      successDiv.innerHTML = "No previous successful workout.";
+    }
+
+    if (data && data.attempt) {
+      attemptDiv.innerHTML = `Last attempt: ${data.attempt.sets}x${data.attempt.reps} @ ${data.attempt.load}`;
+    } else {
+      attemptDiv.innerHTML = "No previous attempt.";
+    }
+
+    if (data && data.attempt && data.attempt.notes && String(data.attempt.notes).trim()) {
+      noteDiv.innerHTML = `Last note: ${data.attempt.notes}`;
+      noteDiv.style.display = "block";
+    } else {
+      noteDiv.innerHTML = "";
+      noteDiv.style.display = "none";
+    }
+
+    const container = document.getElementById("repsTiles");
+
+    if (!container.children.length) {
+      buildReps();
+    }
+
+    // --- SETS / REPS / LOAD from LAST ATTEMPT ---
+    if (data && data.attempt) {
+
+      const setsValue = data.attempt.sets;
+
+      const setsContainer = document.getElementById("setsTiles");
+      const setTiles = Array.from(setsContainer.querySelectorAll(".scroll-tile"));
+
+      const setMatch = setTiles.find(t => parseInt(t.innerText) === setsValue);
+
+      if (setMatch) {
+        selectCenteredSets(setsContainer, setMatch, setsValue);
+      }
+
+      const repsValue = data.attempt.reps;
+
+      const container = document.getElementById("repsTiles");
+      const tiles = Array.from(container.querySelectorAll(".scroll-tile"));
+
+      const match = tiles.find(t => parseInt(t.innerText) === repsValue);
+
+      if (match) {
+        selectCentered(container, match, repsValue);
+      }
+
+      const loadValue = data.attempt.load;
+
+      const loadContainer = document.getElementById("loadTiles");
+      const loadTiles = Array.from(loadContainer.querySelectorAll(".scroll-tile"));
+
+      const loadMatch = loadTiles.find(t => parseInt(t.innerText) === loadValue);
+
+      if (loadMatch) {
+        selectCenteredLoad(loadContainer, loadMatch, loadValue);
+      }
+    }
+
+  }).getLastWorkout(exercise);
+}
+
+function renderExerciseGif(config) {
+  const image = document.getElementById("exerciseGif");
+  const loading = document.getElementById("gifLoading");
+  const placeholder = document.getElementById("gifPlaceholder");
+  const error = document.getElementById("gifError");
+  const state = config && config.state ? config.state : "empty";
+  const url = config && config.url ? config.url : "";
+
+  image.onerror = null;
+  image.onload = null;
+  image.style.display = "none";
+  loading.style.display = "none";
+  placeholder.style.display = "none";
+  error.style.display = "none";
+
+  if (state === "loading" && url) {
+    loading.style.display = "flex";
+    image.onload = () => {
+      image.style.display = "block";
+      loading.style.display = "none";
+      error.style.display = "none";
+      placeholder.style.display = "none";
+    };
+    image.onerror = () => {
+      image.style.display = "none";
+      loading.style.display = "none";
+      error.style.display = "flex";
+    };
+    image.src = url;
+    return;
+  }
+
+  if (state === "empty") {
+    placeholder.style.display = "flex";
+  }
+
+  image.removeAttribute("src");
+}
+
+function save() {
+
+  const btn = document.getElementById("saveBtn");
+
+  const entry = {
+    type: document.getElementById("type").value,
+    exercise: document.getElementById("exercise").value,
+    sets: selectedSets,
+    reps: selectedReps,
+    load: selectedLoad,
+    success: selectedSuccess,
+    notes: document.getElementById("notes").value
+  };
+
+  if (!entry.exercise) {
+    document.getElementById("status").innerHTML = "Select an exercise";
+    return;
+  }
+
+  if (!selectedSets || !selectedReps) {
+    document.getElementById("status").innerHTML = "Select sets and reps";
+    return;
+  }
+
+  if (selectedLoad === null) {
+    document.getElementById("status").innerHTML = "Enter load";
+    return;
+  }
+
+  if (selectedSuccess === null) {
+    document.getElementById("status").innerHTML = "Select success";
+    return;
+  }
+
+  // 🔹 Loading state
+  btn.classList.add("loading");
+  btn.innerText = "Saving...";
+
+  google.script.run.withSuccessHandler(function() {
+
+    // 🔹 Success animation
+    btn.classList.remove("loading");
+    btn.classList.add("success");
+    btn.innerText = "Saved ✓";
+    showScoreFlash();
+
+    document.getElementById("status").innerHTML = "";
+
+    // reset fields
+    selectedSets = null;
+    selectedReps = null;
+    selectedSuccess = null;
+
+    document.querySelectorAll("#setsTiles .scroll-tile").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll("#repsTiles .scroll-tile").forEach(t => t.classList.remove("active"));
+
+    document.getElementById("notes").value = "";
+    resetSuccessToNo();
+
+    // 🔹 revert button after delay
+    setTimeout(() => {
+      btn.classList.remove("success");
+      btn.innerText = "Save Workout";
+    }, 1200);
+
+  }).saveWorkout(entry);
+}
+
+let selectedSets = null;
+let selectedReps = null;
+let selectedLoad = null;
+
+function selectTile(type, value, el) {
+  // clear previous selection
+  const parent = el.parentElement;
+  Array.from(parent.children).forEach(child => {
+    child.classList.remove("active");
+  });
+
+  el.classList.add("active");
+
+  if (type === "sets") selectedSets = value;
+  if (type === "reps") selectedReps = value;
+}
+
+function buildReps(min = 4, max = 20) {
+  const container = document.getElementById("repsTiles");
+  container.innerHTML = "";
+
+  // --- LEFT SPACER ---
+  const leftSpacer = document.createElement("div");
+  leftSpacer.style.flex = "0 0 calc(33.333% - 8px)";
+  container.appendChild(leftSpacer);
+
+  for (let i = min; i <= max; i++) {
+    const div = document.createElement("div");
+    div.className = "scroll-tile";
+    div.innerText = i;
+
+    div.onclick = () => {
+      selectCentered(container, div, i);
+    };
+
+    container.appendChild(div);
+  }
+
+  // --- RIGHT SPACER ---
+  const rightSpacer = document.createElement("div");
+  rightSpacer.style.flex = "0 0 calc(33.333% - 8px)";
+  container.appendChild(rightSpacer);
+}
+
+function selectCentered(container, el, value) {
+  container.querySelectorAll(".scroll-tile").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+
+  selectedReps = value;
+
+  el.scrollIntoView({
+    behavior: "smooth",
+    inline: "center",
+    block: "nearest"
+  });
+}
+
+function enableScrollSelection(container) {
+  container.addEventListener("scroll", () => {
+    const tiles = Array.from(container.querySelectorAll(".scroll-tile"));
+    const center = container.scrollLeft + container.offsetWidth / 2;
+
+    let closest = null;
+    let closestDist = Infinity;
+
+    tiles.forEach(tile => {
+      const tileCenter = tile.offsetLeft + tile.offsetWidth / 2;
+      const dist = Math.abs(center - tileCenter);
+
+      if (dist < closestDist) {
+        closestDist = dist;
+        closest = tile;
+      }
+    });
+
+    if (closest) {
+      tiles.forEach(t => t.classList.remove("active"));
+      closest.classList.add("active");
+      const value = parseInt(closest.innerText);
+
+    if (container.id === "repsTiles") selectedReps = value;
+    if (container.id === "setsTiles") selectedSets = value;
+    if (container.id === "loadTiles") selectedLoad = value;
+    }
+  });
+}
+
+function buildSets(min = 1, max = 20) {
+  const container = document.getElementById("setsTiles");
+  container.innerHTML = "";
+
+  // LEFT SPACER
+  const leftSpacer = document.createElement("div");
+  leftSpacer.style.flex = "0 0 calc(33.333% - 8px)";
+  container.appendChild(leftSpacer);
+
+  for (let i = min; i <= max; i++) {
+    const div = document.createElement("div");
+    div.className = "scroll-tile";
+    div.innerText = i;
+
+    div.onclick = () => {
+      selectCenteredSets(container, div, i);
+    };
+
+    container.appendChild(div);
+  }
+
+  // RIGHT SPACER
+  const rightSpacer = document.createElement("div");
+  rightSpacer.style.flex = "0 0 calc(33.333% - 8px)";
+  container.appendChild(rightSpacer);
+}
+
+function selectCenteredSets(container, el, value) {
+  container.querySelectorAll(".scroll-tile").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+
+  selectedSets = value;
+
+  el.scrollIntoView({
+    behavior: "smooth",
+    inline: "center",
+    block: "nearest"
+  });
+}
+
+function centerDefault(containerId) {
+  const container = document.getElementById(containerId);
+  const tiles = container.querySelectorAll(".scroll-tile");
+
+  if (tiles.length) {
+    const middleIndex = Math.floor(tiles.length / 2);
+    tiles[middleIndex].click();
+  }
+}
+
+function buildLoad(min = 0, max = 500, step = 5) {
+  const container = document.getElementById("loadTiles");
+  container.innerHTML = "";
+
+  // LEFT SPACER
+  const leftSpacer = document.createElement("div");
+  leftSpacer.style.flex = "0 0 calc(33.333% - 8px)";
+  container.appendChild(leftSpacer);
+
+  for (let i = min; i <= max; i += step) {
+    const div = document.createElement("div");
+    div.className = "scroll-tile";
+    div.innerText = i;
+
+    div.onclick = () => {
+      selectCenteredLoad(container, div, i);
+    };
+
+    container.appendChild(div);
+  }
+
+  // RIGHT SPACER
+  const rightSpacer = document.createElement("div");
+  rightSpacer.style.flex = "0 0 calc(33.333% - 8px)";
+  container.appendChild(rightSpacer);
+}
+
+function selectCenteredLoad(container, el, value) {
+  container.querySelectorAll(".scroll-tile").forEach(t => t.classList.remove("active"));
+  el.classList.add("active");
+
+  selectedLoad = value;
+
+  el.scrollIntoView({
+    behavior: "smooth",
+    inline: "center",
+    block: "nearest"
+  });
+}
+
+</script>
+
+  </div>
+</body>
+</html>
